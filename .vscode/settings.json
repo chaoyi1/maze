@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "maze.h": "c",
+        "sdl.h": "c",
+        "stdlib.h": "c",
+        "stdbool.h": "c"
+    },
+    "C_Cpp.default.includePath": [
+        "usr/include/SDL2",
+        "${default}"
+    ]
+}
