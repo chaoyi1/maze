@@ -4,13 +4,16 @@
 #include <stdio.h>
 #include "stack.c"
 
-const int SCREEN_WIDTH = 1280;
-const int SCREEN_HEIGHT = 720;
+enum dimensions { 
+    MAZE_HEIGHT = 36, 
+    MAZE_WIDTH = 64,
+};
+
 const int CELL_SIZE = 20;
 const int WALL_THICKNESS = 4;
 
-const int MAZE_HEIGHT = SCREEN_HEIGHT / CELL_SIZE;
-const int MAZE_WIDTH = SCREEN_WIDTH / CELL_SIZE;
+const int SCREEN_HEIGHT  = MAZE_HEIGHT * CELL_SIZE;
+const int SCREEN_WIDTH = MAZE_WIDTH * CELL_SIZE;
 
 
 struct maze {
