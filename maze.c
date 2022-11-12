@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include "stack.c"
 
-const int SCREEN_WIDTH = 1920;
-const int SCREEN_HEIGHT = 1080;
-const int CELL_SIZE = 24;
+const int SCREEN_WIDTH = 1280;
+const int SCREEN_HEIGHT = 720;
+const int CELL_SIZE = 20;
 const int WALL_THICKNESS = 4;
 
 const int MAZE_HEIGHT = SCREEN_HEIGHT / CELL_SIZE;
@@ -14,7 +14,7 @@ const int MAZE_WIDTH = SCREEN_WIDTH / CELL_SIZE;
 
 
 struct maze {
-    struct cell* board[45][80];
+    struct cell* board[36][64];
 };
 
 
@@ -68,39 +68,8 @@ int get_unvisited_neighbors(
     struct cell* maze[MAZE_HEIGHT][MAZE_WIDTH],
     int curr_x,
     int curr_y,
-    struct cell** unvis_neighbours) {
-    
-    struct cell* north = NULL;
-    struct cell* east = NULL;
-    struct cell* south = NULL;
-    struct cell* west = NULL;
-
-    int count = 0;
-
-    if (((north = get_cell(maze, curr_x, curr_y - 1)) != NULL) && !north->visited) {
-        unvis_neighbours[count] = north;
-        count += 1;
-    }
-    if (((east = get_cell(maze, curr_x + 1, curr_y)) != NULL) && !east->visited) {
-        unvis_neighbours[count] = east;
-        count += 1;
-    }
-    if (((south = get_cell(maze, curr_x, curr_y + 1)) != NULL) && !south->visited) {
-        unvis_neighbours[count] = south;
-        count += 1;
-    }
-    if (((west = get_cell(maze, curr_x - 1, curr_y)) != NULL) && !west->visited) {
-        unvis_neighbours[count] = west;
-        count += 1;
-    }
-    return count;
-}
-
-int get_unvisited_connected_neighbors(
-    struct cell* maze[MAZE_HEIGHT][MAZE_WIDTH],
-    int curr_x,
-    int curr_y,
-    struct cell** unvis_neighbours) {
+    struct cell** unvis_neighbours,
+    bool solve) {
     
     struct cell* curr = maze[curr_y][curr_x];
     struct cell* north = NULL;
@@ -110,21 +79,50 @@ int get_unvisited_connected_neighbors(
 
     int count = 0;
 
-    if (((north = get_cell(maze, curr_x, curr_y - 1)) != NULL) && !north->visited && !north->bottom) {
-        unvis_neighbours[count] = north;
-        count += 1;
+    if (((north = get_cell(maze, curr_x, curr_y - 1)) != NULL) && !north->visited) {
+        if (solve) {
+            if (!north->bottom) {
+                unvis_neighbours[count] = north;
+                count += 1;
+            }
+        }
+        else {
+            unvis_neighbours[count] = north;
+            count += 1;
+        }
     }
-    if (((east = get_cell(maze, curr_x + 1, curr_y)) != NULL) && !east->visited && !curr->right) {
-        unvis_neighbours[count] = east;
-        count += 1;
+    if (((east = get_cell(maze, curr_x + 1, curr_y)) != NULL) && !east->visited) {
+        if (solve) {
+            if (!curr->right) {
+                unvis_neighbours[count] = east;
+                count += 1; 
+            }
+        } else {
+            unvis_neighbours[count] = east;
+            count += 1;
+        }
     }
-    if (((south = get_cell(maze, curr_x, curr_y + 1)) != NULL) && !south->visited && !curr->bottom) {
-        unvis_neighbours[count] = south;
-        count += 1;
+    if (((south = get_cell(maze, curr_x, curr_y + 1)) != NULL) && !south->visited) {
+        if (solve) {
+            if (!curr->bottom) {
+                unvis_neighbours[count] = south;
+                count += 1;
+            }
+        } else {
+            unvis_neighbours[count] = south;
+            count += 1;
+        }
     }
-    if (((west = get_cell(maze, curr_x - 1, curr_y)) != NULL) && !west->visited && !west->right) {
-        unvis_neighbours[count] = west;
-        count += 1;
+    if (((west = get_cell(maze, curr_x - 1, curr_y)) != NULL) && !west->visited) {
+        if (solve) {
+            if (!west->right) {
+                unvis_neighbours[count] = west;
+                count += 1;
+            }
+        } else {
+            unvis_neighbours[count] = west;
+            count += 1;
+        }
     }
     return count;
 }
@@ -132,6 +130,43 @@ int get_unvisited_connected_neighbors(
 int gen_rand(int min, int max) {
     return (rand() % (max - min + 1) + min);
 }
+
+void draw_cell(struct cell* curr) {
+    if (curr->visited && !curr->on_path) {
+        SDL_SetRenderDrawColor(gRenderer, 0, 255, 0, 255);
+    } else if (curr->on_path) {
+        SDL_SetRenderDrawColor(gRenderer, 0, 0, 255, 255);
+    }
+    else if (!curr->visited && !curr->on_path) {
+        SDL_SetRenderDrawColor( gRenderer, 255, 255, 255, 255);
+    }
+    // Draw cell
+    SDL_Rect cell_rect;
+    cell_rect.x = curr->x * CELL_SIZE;
+    cell_rect.y = curr->y * CELL_SIZE;
+    cell_rect.w = CELL_SIZE;
+    cell_rect.h = CELL_SIZE;
+    SDL_RenderFillRect(gRenderer, &cell_rect);
+    // Draw walls
+    SDL_SetRenderDrawColor( gRenderer, 0, 0, 0, 255);
+    if (curr->right) {
+        SDL_Rect wall_rect;
+        wall_rect.x = (curr->x * CELL_SIZE) + (CELL_SIZE - WALL_THICKNESS);
+        wall_rect.y = curr->y  * CELL_SIZE;
+        wall_rect.w = WALL_THICKNESS;
+        wall_rect.h = CELL_SIZE;
+        SDL_RenderFillRect(gRenderer, &wall_rect);
+    }
+    if (curr->bottom) {
+        SDL_Rect wall_rect;
+        wall_rect.x = curr->x * CELL_SIZE;
+        wall_rect.y = (curr->y * CELL_SIZE) + (CELL_SIZE - WALL_THICKNESS);
+        wall_rect.w = CELL_SIZE;
+        wall_rect.h = WALL_THICKNESS;
+        SDL_RenderFillRect(gRenderer, &wall_rect);   
+    }
+}
+
 
 void draw_maze(struct cell* maze[MAZE_HEIGHT][MAZE_WIDTH])
 {
@@ -144,48 +179,15 @@ void draw_maze(struct cell* maze[MAZE_HEIGHT][MAZE_WIDTH])
     for (int y = 0; y < MAZE_HEIGHT; y++) {
         for (int x = 0; x < MAZE_WIDTH; x++) {
             struct cell *curr = maze[y][x];
-            if (curr->visited && !curr->on_path) {
-                SDL_SetRenderDrawColor(gRenderer, 0, 255, 0, 255);
-            } else if (curr->on_path && curr->visited) {
-                SDL_SetRenderDrawColor(gRenderer, 0, 0, 255, 255);
-            }
-            else if (!curr->visited && !curr->on_path) {
-                SDL_SetRenderDrawColor( gRenderer, 255, 255, 255, 255);
-            }
-            // Draw cell
-            SDL_Rect cell_rect;
-            cell_rect.x = x * CELL_SIZE;
-            cell_rect.y = y * CELL_SIZE;
-            cell_rect.w = CELL_SIZE;
-            cell_rect.h = CELL_SIZE;
-            SDL_RenderFillRect(gRenderer, &cell_rect);
-            // Draw walls
-            SDL_SetRenderDrawColor( gRenderer, 0, 0, 0, 255);
-            if (curr->right) {
-                SDL_Rect wall_rect;
-                wall_rect.x = (x * CELL_SIZE) + (CELL_SIZE - WALL_THICKNESS);
-                wall_rect.y = y * CELL_SIZE;
-                wall_rect.w = WALL_THICKNESS;
-                wall_rect.h = CELL_SIZE;
-                SDL_RenderFillRect(gRenderer, &wall_rect);
-            }
-            if (curr->bottom) {
-                SDL_Rect wall_rect;
-                wall_rect.x = x * CELL_SIZE;
-                wall_rect.y = (y * CELL_SIZE) + (CELL_SIZE - WALL_THICKNESS);
-                wall_rect.w = CELL_SIZE;
-                wall_rect.h = WALL_THICKNESS;
-                SDL_RenderFillRect(gRenderer, &wall_rect);   
-            }
+            draw_cell(curr);
         }
     }
-
     //Update screen
     SDL_RenderPresent(gRenderer);
 }
 
 void generate_maze(struct cell* maze[MAZE_HEIGHT][MAZE_WIDTH]) {
-    struct cell **stack = malloc(MAZE_HEIGHT * MAZE_WIDTH * sizeof(struct cell*));
+    struct cell **stack = calloc(MAZE_HEIGHT * MAZE_WIDTH, sizeof(struct cell*));
     int stack_top = 0;
     struct cell* init_cell = maze[0][0];
     init_cell->visited = true;
@@ -193,7 +195,7 @@ void generate_maze(struct cell* maze[MAZE_HEIGHT][MAZE_WIDTH]) {
     while (stack_top != 0) {
         struct cell *curr_cell = stack_pop(stack, &stack_top);
         struct cell* u_neighbours[4] = {NULL, NULL, NULL, NULL};
-        int u_count =  get_unvisited_neighbors(maze, curr_cell->x, curr_cell->y, u_neighbours);
+        int u_count =  get_unvisited_neighbors(maze, curr_cell->x, curr_cell->y, u_neighbours, false);
         if (u_count > 0) {
             stack_push(curr_cell, stack, &stack_top);
             int index = gen_rand(0, u_count - 1);
@@ -227,8 +229,8 @@ void solve_maze(struct cell* maze[MAZE_HEIGHT][MAZE_WIDTH])
     struct cell* start = maze[0][0];
     struct cell* end = maze[MAZE_HEIGHT - 1][MAZE_WIDTH - 1];
 
-    struct cell **stack = malloc(MAZE_HEIGHT * MAZE_WIDTH * sizeof(struct cell*));
-    struct cell* prev[MAZE_HEIGHT * MAZE_WIDTH];
+    struct cell **stack = calloc(MAZE_HEIGHT * MAZE_WIDTH, sizeof(struct cell*));
+    struct cell **prev = calloc(MAZE_HEIGHT * MAZE_WIDTH, sizeof(struct cell*));
     int stack_top = 0;
     stack_push(start, stack, &stack_top);
     while (stack_top != 0) {
@@ -238,21 +240,24 @@ void solve_maze(struct cell* maze[MAZE_HEIGHT][MAZE_WIDTH])
         }
         current->visited = true;
         struct cell* u_neighbours[4] = {NULL, NULL, NULL, NULL};
-        int u_count =  get_unvisited_connected_neighbors(maze, current->x, current->y, u_neighbours);
+        int u_count =  get_unvisited_neighbors(maze, current->x, current->y, u_neighbours, true);
         for (int i = 0; i < u_count; i++) {
-            stack_push(u_neighbours[i], stack, &stack_top);
-            prev[u_neighbours[i]->y* MAZE_WIDTH + u_neighbours[i]->x] = current;
+            struct cell* neighbour = u_neighbours[i];
+            stack_push(neighbour, stack, &stack_top);
+            int pos = neighbour->y * MAZE_WIDTH + neighbour->x;
+            prev[pos] = current;
         }
-        draw_maze(maze);
     }
-    SDL_RenderPresent(gRenderer);
     free(stack);
     struct cell* current = end;
     while (current != NULL) {
         current->on_path = true;
-        current = prev[current->y * MAZE_WIDTH + current->x];
-        draw_maze(maze);
+        draw_cell(current);
+        int pos = current->y * MAZE_WIDTH + current->x;
+        current = prev[pos];
     }
+    SDL_RenderPresent(gRenderer);
+    free(prev);
 }
 
 void reset_visited(struct cell* maze[MAZE_HEIGHT][MAZE_WIDTH])
@@ -262,6 +267,7 @@ void reset_visited(struct cell* maze[MAZE_HEIGHT][MAZE_WIDTH])
             maze[i][j]->visited = false;
         }
     }
+    draw_maze(maze);
 }
 
 bool init_sdl()
